@@ -1,0 +1,271 @@
+//미리 노래에 맞춰서 막자에 맞는 노트를 찍어둠
+//노트에 담긴정보
+//  -노트의 종류(장,단,끝)
+//  -노트의 위치(어느 키패드의 노트인지)
+//  -노트 생성 시간
+//  -장노트일 경우 노트의 지속시간
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Note_Maker : MonoBehaviour {
+    //노트 종류별 오브젝트
+    public GameObject SNote;    //단노트
+    public GameObject LNote;    //장노트
+    public GameObject UpNote;   //장노트의 끝노트
+    public GameObject SNote_W;
+    public GameObject LNote_W;
+    public GameObject UpNote_W;
+    float time = 0;
+    float exit_time = 0;
+    public static Note_Maker instance = null;
+    private List<note_Info> note_List;
+    private GameInfo info;
+    private int speed_Value;
+    
+    //키패드별 index값
+    private int index = 0;
+    private int s_index = 0;
+    private int d_index = 0;
+    private int f_index = 0;
+    private int p_index = 0;
+    private int j_index = 0;
+    private int k_index = 0;
+    private int l_index = 0;
+    
+    //키패드 x좌표값
+    private float s_pos = -9.08f;
+    private float d_pos = -6.06f;
+    private float f_pos = -3.035f;
+    private float p_pos = 0.0f;
+    private float j_pos = 3.02f;
+    private float k_pos = 6.045f;
+    private float l_pos = 9.07f;
+
+
+    private void Awake()
+    {
+        instance = this;
+        info = GameObject.Find("GameInfo").GetComponent<GameInfo>();
+    }
+
+    private void Start()
+    {
+        note_List = Convert_Note.instance.note_List;
+        
+        //이전 씬에서 설정한 속도값 적용
+        switch (info.Speed_Info)
+        {
+            case 0:
+                speed_Value = 1;
+                break;
+            case 1:
+                speed_Value = 2;
+                break;
+            case 2:
+                speed_Value = 4;
+                break;
+        }
+    }
+    
+    public void FixedUpdate()
+    {
+        time += Time.deltaTime;
+        //노트가 최대치에 도달했을경우 출력중지
+        if (index >= note_List.Count)
+        {
+            exit_time += Time.deltaTime;
+            if (exit_time >= 10.0f)
+            {
+                GameObject.Find("Name").SetActive(false);
+                this.GetComponent<ScoreCtrl>().enabled = true;
+                GameObject.Find("gameCtrl").GetComponent<GameCtrl>().enabled = false;
+                this.GetComponent<Note_Maker>().enabled = false;
+            }
+            return;
+        }
+        
+        //노트생성 시간에 맞춰 노트생성
+        for (int i = 0; i < note_List.Count; i++)
+        {
+            if (note_List[i].isMaked == false && note_List[i].time <= time)
+            {
+                makeNote(note_List[i], i);
+                index++;
+            }
+        }
+    }
+
+    //노트 생성 메소드
+    private void makeNote(note_Info note, int index)
+    {
+        //노트가 끝노트일 경우
+        if (note.endNote)
+            makeEndNote(note);
+        
+        //노트가 단노트일 경우
+        else if (note.isShort)
+        {
+            if (note.hit == 'd' || note.hit == 'p' || note.hit == 'k')
+                setPosition(note, index, Instantiate(SNote_W));
+            else
+                setPosition(note, index, Instantiate(SNote));
+        }
+        
+        //노트가 장노트일 경우
+        else
+        {
+            if (note.hit == 'd' || note.hit == 'p' || note.hit == 'k')
+                MakeNote_L(note, index, Instantiate(LNote_W));
+            else
+                MakeNote_L(note, index, Instantiate(LNote));
+        }
+        note.isMaked = true;
+    }
+
+    //노트의 위치 
+    private void setPosition(note_Info note, int index, GameObject obj)
+    {
+        char c = note.hit;
+        switch (c)
+        {
+            case 's':
+                obj.transform.position = new Vector3(s_pos, 35.0f * speed_Value, 0);
+                obj.name = "s" + s_index.ToString();
+                s_index++;
+                break;
+            case 'd':
+                obj.transform.position = new Vector3(d_pos, 35.0f * speed_Value, 0);
+                obj.name = "d" + d_index.ToString();
+                d_index++;
+                break;
+            case 'f':
+                obj.transform.position = new Vector3(f_pos, 35.0f * speed_Value, 0);
+                obj.name = "f" + f_index.ToString();
+                f_index++;
+                break;
+            case 'p':
+                obj.transform.position = new Vector3(p_pos, 35.0f * speed_Value, 0);
+                obj.name = "p" + p_index.ToString();
+                p_index++;
+                break;
+            case 'j':
+                obj.transform.position = new Vector3(j_pos, 35.0f * speed_Value, 0);
+                obj.name = "j" + j_index.ToString();
+                j_index++;
+                break;
+            case 'k':
+                obj.transform.position = new Vector3(k_pos, 35.0f * speed_Value, 0);
+                obj.name = "k" + k_index.ToString();
+                k_index++;
+                break;
+            case 'l':
+                obj.transform.position = new Vector3(l_pos, 35.0f * speed_Value, 0);
+                obj.name = "l" + l_index.ToString();
+                l_index++;
+                break;
+        }
+    }
+
+    //장노트 생성
+    private void MakeNote_L(note_Info note,int index, GameObject obj)
+    {
+        char c = note.hit;
+        float f = note.long_Time;
+
+        note_Info endNote = new note_Info();
+        endNote.time = note.time + note.long_Time;
+        endNote.hit = c;
+        endNote.endNote = true;
+        note_List.Add(endNote);
+        
+        obj.GetComponent<BoxCollider2D>().size = new Vector2(1, 500);
+        obj.GetComponent<BoxCollider2D>().offset = new Vector2(0, 250);
+
+        switch (c)
+        {
+            case 's':
+                obj.transform.position = new Vector3(s_pos, 35.0f * speed_Value, 0);
+                obj.name = "s" + s_index.ToString();
+                s_index++;
+                break;
+            case 'd':
+                obj.transform.position = new Vector3(d_pos, 35.0f * speed_Value, 0);
+                obj.name = "d" + d_index.ToString();
+                d_index++;
+                break;
+            case 'f':
+                obj.transform.position = new Vector3(f_pos, 35.0f * speed_Value, 0);
+                obj.name = "f" + f_index.ToString();
+                f_index++;
+                break;
+            case 'p':
+                obj.transform.position = new Vector3(p_pos, 35.0f * speed_Value, 0);
+                obj.name = "p" + p_index.ToString();
+                p_index++;
+                break;
+            case 'j':
+                obj.transform.position = new Vector3(j_pos, 35.0f * speed_Value, 0);
+                obj.name = "j" + j_index.ToString();
+                j_index++;
+                break;
+            case 'k':
+                obj.transform.position = new Vector3(k_pos, 35.0f * speed_Value, 0);
+                obj.name = "k" + k_index.ToString();
+                k_index++;
+                break;
+            case 'l':
+                obj.transform.position = new Vector3(l_pos, 35.0f * speed_Value, 0);
+                obj.name = "l" + l_index.ToString();
+                l_index++;
+                break;
+        }
+    }
+
+    //끝노트 생성
+    private void makeEndNote(note_Info note)
+    {
+        GameObject[] list_obj = new GameObject[20];
+        list_obj = GameObject.FindGameObjectsWithTag("LONGNOTE");
+        GameObject obj = null;
+        if (note.hit == 'd' || note.hit == 'p' || note.hit == 'k')
+            obj = Instantiate(UpNote_W);
+        else
+            obj = Instantiate(UpNote);
+
+        char c = note.hit;
+        switch (c)
+        {
+            case 's':
+                obj.transform.position = new Vector3(s_pos, 35.0f * speed_Value, 0);
+                obj.name = "s" + s_index.ToString();
+                break;
+            case 'd':
+                obj.transform.position = new Vector3(d_pos, 35.0f * speed_Value, 0);
+                obj.name = "d" + d_index.ToString();
+                break;
+            case 'f':
+                obj.transform.position = new Vector3(f_pos, 35.0f * speed_Value, 0);
+                obj.name = "f" + f_index.ToString();
+                break;
+            case 'p':
+                obj.transform.position = new Vector3(p_pos, 35.0f * speed_Value, 0);
+                obj.name = "p" + p_index.ToString();
+                break;
+            case 'j':
+                obj.transform.position = new Vector3(j_pos, 35.0f * speed_Value, 0);
+                obj.name = "j" + j_index.ToString();
+                break;
+            case 'k':
+                obj.transform.position = new Vector3(k_pos, 35.0f * speed_Value, 0);
+                obj.name = "k" + k_index.ToString();
+                break;
+            case 'l':
+                obj.transform.position = new Vector3(l_pos, 35.0f * speed_Value, 0);
+                obj.name = "l" + l_index.ToString();
+                break;
+        }
+    }
+}
